@@ -1,0 +1,10 @@
+<component name="ArtifactManager">
+  <artifact type="jar" name="JFFMpeg:jar">
+    <output-path>$PROJECT_DIR$/out/artifacts/JFFMpeg_jar</output-path>
+    <root id="archive" name="JFFMpeg.jar">
+      <element id="module-output" name="JFFMpeg" />
+      <element id="extracted-dir" path="$PROJECT_DIR$/jaudiotagger-2.2.6-SNAPSHOT.jar" path-in-jar="/" />
+      <element id="dir-copy" path="$PROJECT_DIR$" />
+    </root>
+  </artifact>
+</component>
