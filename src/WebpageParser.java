@@ -6,7 +6,7 @@ import java.util.Scanner;
 import java.io.IOException;
 
 public class WebpageParser {
-    private static final String GENIUS_URL = "https://genius.com/search?q=";
+    private static final String GENIUS_URL = "https://genius.com/search?q=";// maybe use az lyrics instead
     private static final String BING_URL= "https://bing.com/search?q=";
     private static final String SPACE_CHARACTER = "+";
     private static final String[] EXPLICIT_CONTAINS = {"shit","fuck","bitch","nigger","nigga","asshole","fag","dick","pussy"};
@@ -16,17 +16,17 @@ public class WebpageParser {
 
         return isExplicit(getLyrics(getGeniusUrl(info)));
     }
-    private static boolean isExplicit(String lyrics){
+    public static boolean isExplicit(String lyrics){
 
         Scanner s = new Scanner(lyrics);
         while(s.hasNext()){
 
             String lyric = s.next();
             for(String word : EXPLICIT_CONTAINS){
-                if(lyric.contains(word)){return true;}
+                if(lyric.contains(word)){ return true;}
             }
             for(String word : EXPLICIT_EQUALS) {
-                if (lyric.equals(word)) {return true;}
+                if (lyric.equals(word)) { return true;}
             }
         }
         return false;
@@ -45,7 +45,7 @@ public class WebpageParser {
         for(Element element : elements) {
             String str = element.absUrl("href");
             System.out.println(element.absUrl("href"));
-            if(str.contains("genius.com") && !str.contains("genius.com/albums") && !str.contains("genius.com/artists")){
+            if(str.contains("genius.com") && !str.contains("genius.com/albums") && !str.contains("genius.com/artists") && !str.contains("genius.com/a/")){
                 return str;}
         }
         return null;
@@ -56,7 +56,15 @@ public class WebpageParser {
     private  static int attempts = 0;
     private static String getLyrics(String url) throws  IOException {
         Document doc = Jsoup.connect(url).get();
-        String text = doc.body().text();
+        String text = doc.body().text(); // this doesn't keep formatting of webpage, removes \n and \t, hopefully can be fixed
+
+        int startIndex = text.indexOf("Lyrics") + "Lyrics".length();
+        int endIndex = text.indexOf("More on Genius");
+        String lyrics = text.substring(startIndex,endIndex);
+        /*
+        Yo I'm retarded
+        wrote a million lines of code instead of just doing these easy 3 lines of code above
+        I'm finna keep this here to remind me of how stupid I am
         Scanner s = new Scanner(text);
         String lyrics = "";
         String temp = s.next();
@@ -74,6 +82,7 @@ public class WebpageParser {
             if((temp.equals("Lyrics")) && (count <= 0)){
                 count++;
                 addToLyrics = true;
+                temp = s.next();
                 continue;
             }
             if(temp.equals("More"))
@@ -96,6 +105,7 @@ public class WebpageParser {
             temp = s.next();
         }
         attempts = 0;
+        */
         return lyrics;
     }
     public static void main(String[] args) throws Exception {

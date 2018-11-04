@@ -7,6 +7,7 @@ import org.jaudiotagger.audio.mp4.Mp4TagReader;
 import org.jaudiotagger.audio.mp4.Mp4TagWriter;
 import org.jaudiotagger.tag.FieldKey;
 import org.jaudiotagger.tag.Tag;
+import org.jaudiotagger.tag.TagField;
 import org.jaudiotagger.tag.flac.FlacTag;
 import org.jaudiotagger.tag.images.Artwork;
 import org.jaudiotagger.tag.images.ArtworkFactory;
@@ -27,6 +28,7 @@ public class JAudioData{
     private static final String PURCHASED_AAC = "C:\\Users\\Zubair\\Documents\\Purchased AAC.m4a";
     private static final String TEMP = OUTPUT+"\\temp";
     private static final String M4A = ".m4a";
+    private static final String MP4 = ".mp4";
     private static final String MP3 = ".mp3";
     private static final String FLAC = ".flac";
 
@@ -43,7 +45,7 @@ public class JAudioData{
             Mp4FieldKey.ALBUM_ARTIST,
             Mp4FieldKey.ARTIST,
             Mp4FieldKey.COMPOSER,
-            Mp4FieldKey.DAY};
+            Mp4FieldKey.DAY, Mp4FieldKey.MM_ORIGINAL_YEAR, Mp4FieldKey.COPYRIGHT};
     private static final FieldKey[] fieldKeys =
     {FieldKey.TITLE,
     FieldKey.TRACK,
@@ -52,8 +54,8 @@ public class JAudioData{
     FieldKey.ALBUM,
     FieldKey.ALBUM_ARTIST,
     FieldKey.ARTIST,
-    FieldKey.COMPOSER};
-
+    FieldKey.COMPOSER, FieldKey.YEAR, FieldKey.COPYRIGHT};
+    private static final String[] genericTitles = {"intro","introduction","outro","bonus"};
     private Tag tag;
     private String EXTENSION;
     private File tempFileFolder;
@@ -62,7 +64,7 @@ public class JAudioData{
     public JAudioData(File song, File temp) throws Exception{
         EXTENSION = getExtension(song);
         if(EXTENSION == null){
-            System.err.println(song.toString()+"Is not a valid audio file ");return;
+            System.err.println(song.toString()+" Is not a valid audio file ");return;
         }
         if (temp.isDirectory()) {
             tempFileFolder = temp;
@@ -99,7 +101,7 @@ public class JAudioData{
 
     public void save() throws Exception{
         String temp = tempFileFolder.toString()+"\\"+"temp"+EXTENSION;
-        if(EXTENSION.equals(M4A)){
+        if(EXTENSION.equals(M4A) || EXTENSION.equals(MP4)){
             Mp4TagWriter writer = new Mp4TagWriter();
             Files.deleteIfExists(new File(temp).toPath());
             RandomAccessFile tempRaf = new RandomAccessFile(temp,"rw");
@@ -140,13 +142,17 @@ public class JAudioData{
     public String getComposer(){
         return tag.getFirst(FieldKey.COMPOSER);
     }
+    public String getLyrics() { return tag.getFirst(FieldKey.LYRICS); }
 
     public void setArt(File art)throws Exception{
         Artwork artwork = ArtworkFactory.createArtworkFromFile(art);
         tag.deleteArtworkField();
         tag.addField(artwork);
         tag.setField(artwork);
-        save();
+    }
+    public void setLyrics(String lyrics) throws Exception{
+        tag.addField(FieldKey.LYRICS, lyrics);
+        tag.setField(FieldKey.LYRICS, lyrics);
     }
 
     public static void setArtwork(File art, File m4a) throws
@@ -199,23 +205,27 @@ public class JAudioData{
     }
 
     public void setExplicitItunes(File iTunesSong) throws Exception{
-        Tag purchasedTag = getMp4Tag(iTunesSong);
-        purchasedTag.deleteArtworkField();
-        for(FieldKey key:fieldKeys){
-            String data = tag.getFirst(key);
-            if(data!=null && !(data.equals(""))) {
-                purchasedTag.setField(key,data);}
-            else{purchasedTag.deleteField(key);}
+        Mp4Tag purchasedTag = getMp4Tag(iTunesSong);
+        //purchasedTag.deleteArtworkField();
+        for(FieldKey key:FieldKey.values()){
+            try {
+                String data = tag.getFirst(key);
+                if (data != null && !(data.equals(""))) {
+                    purchasedTag.setField(key, data);
+                } else {
+                    purchasedTag.deleteField(key);
+                }
+            }
+            catch (org.jaudiotagger.tag.KeyNotFoundException e){}
         }
+        purchasedTag.setField(Mp4FieldKey.RATING,EXPLICIT);
         tag = purchasedTag;
-        save();
     }
     public static void setItunesExplicit(File testFile) throws Exception {
         Mp4TagReader reader = new Mp4TagReader();
         Mp4TagWriter writer = new Mp4TagWriter();
 
         RandomAccessFile test = new RandomAccessFile(testFile.toString(), "rw");
-        File purchasedFile = new File(PURCHASED_AAC);
         RandomAccessFile purchasedAAC = new RandomAccessFile(
                 PURCHASED_AAC, "rw");
         Mp4Tag testTag = reader.read(test);
@@ -231,6 +241,7 @@ public class JAudioData{
             }
             catch (org.jaudiotagger.tag.KeyNotFoundException e){}
         }
+        purchasedAacTag.setField(Mp4FieldKey.RATING,"1");
 
 
         Files.deleteIfExists(new File("temp.m4a").toPath());
@@ -242,10 +253,21 @@ public class JAudioData{
         Files.deleteIfExists(new File("temp.m4a").toPath());
 
     }
+    public void printAllData(){
+        for(FieldKey key:FieldKey.values()){
+            try {
+                String data = tag.getFirst(key);
+                if (data != null && !(data.equals(""))) {
+                    System.out.println(key.toString()+":\t"+data);
+                }
+            }
+            catch (org.jaudiotagger.tag.KeyNotFoundException e){}
+        }
+    }
 
 
 
-    public static void guiTest(String path, String out, File ffmpeg, int bitRate)
+    public static void guiTest(String path, String out, File ffmpeg, File tempFileFolder, File purchasedAAC, int bitRate)
             throws Exception,
             org.jaudiotagger.audio.exceptions.CannotReadException,
             org.jaudiotagger.tag.FieldDataInvalidException,
@@ -258,25 +280,56 @@ public class JAudioData{
             //for(int i=0;i<10;i++){
             String output = out;
             String album = getAlbumMp3(file);
-
             for (char c : ca) {
                 album = album.replace(""+c, "_");
             }
             output+="\\"+album;
             File directory = new File(output);
             directory.mkdir();
+
             JAudioData j = new JAudioData(file, new File("temp.m4a"));
-
+            String albumArtist = j.getAlbumArtist();
+            String title = j.getTitle();
             boolean explicit = false;
-            // when getting the title need to parse through it to remove anything after key words "feat.","ft","(","-","_"/
-            if ((j.getAlbumArtist()!=null && !j.getAlbumArtist().equals("")) &&
-                    (j.getTitle()!=null && !j.getTitle().equals(""))
-                    && (j.getAlbum()!=null && !j.getAlbum().equals(""))){
 
-                explicit = WebpageParser.isExplicit(j.getAlbumArtist(),Parser.removeUnneededInfo(j.getTitle()),j.getAlbum());}
+            // if there is no album artist use artist
+            if( albumArtist==null || albumArtist.equals("")){
+                String artist = j.getArtist();
+                if (artist!=null && !artist.equals("")){
+                    albumArtist = artist;
+                }
+            }
+            boolean useAlbum = false;
+            for(String str : genericTitles){
+                if (title==null || title.equals("")){break;}
+                if(str.equalsIgnoreCase(title)){
+                    useAlbum = true;
+                }
+            }
+
+            if ( albumArtist!=null && !albumArtist.equals("") && title!=null && !title.equals("") ){
+                if (useAlbum) {
+                    String albumTitle = j.getAlbum();
+
+                    try {
+
+                        explicit = WebpageParser.isExplicit(albumArtist, Parser.removeInfoForSearch(title), Parser.removeInfoForSearch(albumTitle));
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
+                }
+                else {
+                    try {
+                        explicit = WebpageParser.isExplicit(Parser.removeInfoForSearch(title), albumArtist);
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
+                }
+            }
 
             JFFMpeg.mp3Tom4a(file,new File(output),new File(out+"\\temp"+allFiles.indexOf(file)+".jpeg"),
                     ffmpeg,bitRate, explicit);
+
             //JFFMpeg.mp3Tom4a(allFiles.get(i),new File(output),new File(TEMP+i+".jpeg"));
 
         }

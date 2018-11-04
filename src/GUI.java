@@ -131,7 +131,9 @@ public class GUI extends Application implements EventHandler<ActionEvent>{
                 purchasedText.setText(purchasedFile.toString());}
         }
         else if(source.equals(convert)){
-            try{JAudioData.guiTest(inputText.getText(),outputText.getText(),new File(ffmpegText.getText()),(int)bitRate.getValue());}
+            try{JAudioData.guiTest(inputText.getText(),outputText.getText(),new File(ffmpegText.getText()), new File(tempText.getText()), new File(purchasedText.getText()) , (int)bitRate.getValue());
+                //Converter.gui(inputText.getText(),outputText.getText(),new File(ffmpegText.getText()), new File(tempText.getText()), new File(purchasedText.getText()) , (int)bitRate.getValue());
+            }//code works with first line but not with 2nd line
             catch(Exception e){e.printStackTrace();}
         }
 

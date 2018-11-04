@@ -24,7 +24,7 @@ public class JFFMpeg {
         String input = mp3File.toString();
         String name = mp3File.getName();
 
-        String output = name.substring(0, name.indexOf(MP3)) + M4A;
+        String output = name.substring(0, name.lastIndexOf('.')) + M4A;
         output = m4aFolder.toString() + "\\" + output;
         //cd ffmpeg\bin && ffmpeg -y -i input.mp3 -an -vcodec copy cover.jpg && ffmpeg -y -i input.mp3 -c:a aac -b:a 192k -vn output.m4a
         System.out.println("ffmpeg input:"+input);
@@ -53,24 +53,20 @@ public class JFFMpeg {
 
     /**
      *
-     * @param file The original file. can be mp3 or flac
-     * @param fileExtension the file extension of the original file
-     * @param m4aFolder the location for the new file to be placed. By default the file gets placed in a folder of the album name inside the given directory
+     * @param file The original file. can be mp3 or flac or alac(.m4a)
+     * @param m4aOutputFile the location for the new file that will be encoded as aac audio. By default the file gets placed in a folder of the album name inside the given directory
      * @param coverArt the file for the cover art. should be a jpeg
      * @param bitRate the bit rate in kbps. For example a high bit rate is 320kbps. It is recommended to use a higher bitrate when converting from mp3 to m4a than you would use when converting from flac.
      * @return a boolean that represents whether or not the song has album art that needs to be written
      * @throws Exception
      */
-    public boolean convertToM4a(File file,String fileExtension, File m4aFolder, File coverArt, int bitRate) throws Exception{
+    public boolean convertToM4a(File file, File m4aOutputFile, File coverArt, int bitRate) throws Exception{
         String input = file.toString();
-        String name = file.getName();
 
-        String output = name.substring(0, name.indexOf(MP3)) + M4A;
-        output = m4aFolder.toString() + "\\" + output;
         //cd ffmpeg\bin && ffmpeg -y -i input.mp3 -an -vcodec copy cover.jpg && ffmpeg -y -i input.mp3 -c:a aac -b:a 192k -vn output.m4a
         ProcessBuilder builder = new ProcessBuilder(
                 "cmd.exe", "/c", "cd "+ffmpegPath+" && " +
-                "ffmpeg -y -i \"" + input + "\" -c:a aac -b:a "+bitRate+"k -cutoff 20000 -vn \"" + output +
+                "ffmpeg -y -i \"" + input + "\" -c:a aac -b:a "+bitRate+"k -cutoff 20000 -vn \"" + m4aOutputFile +
                 "\" && ffmpeg -y -i \""
                 + input + "\" -an -vcodec copy \"" + coverArt + "\"");
         builder.redirectErrorStream(true);
