@@ -19,7 +19,6 @@ public class Converter {
         for(File file: allFiles) {
             JAudioData song = new JAudioData(file, tempFileFolder);
 
-
             String album = song.getAlbum();
             album = FileUtil.makeFileNameSafe(album);
 
@@ -101,7 +100,7 @@ public class Converter {
     }
 
     public static void main(String[] args) throws Exception{
-       String lyrics = getLyricsWithoutErrors(new JAudioData(new File("C:\\Users\\Zubair\\Documents\\music\\4th_Quarter\\00 4th Quarter.m4a"),
+       String lyrics = getLyricsWithoutErrors(new JAudioData(new File("C:\\Users\\Zubair\\Documents\\gpm\\Big Sean\\4th Quarter\\00 4th Quarter.mp3"),
                 new File("C:\\Users\\Zubair\\Videos\\Captures")));
         System.out.println("\n\n\n\t"+lyrics);
     }

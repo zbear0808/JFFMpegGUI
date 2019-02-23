@@ -32,7 +32,7 @@ public class JAudioData{
     private static final String MP3 = ".mp3";
     private static final String FLAC = ".flac";
 
-    private static char[] ca = {'.',',',':',';','\"','\'','|','\t','\n','*','?','!','=','/','\\', ' '};
+    private static char[] ca = {'.',',',':',';','\"','\'','|','\t','\n','*','?','!','=','/','\\', ' ', '<','>'};
     private static final String[] EXTENSIONS ={M4A,MP3,FLAC};
     private static final String EXPLICIT = "1";
     private static ArrayList<File> allFiles = new ArrayList<>();
@@ -103,13 +103,18 @@ public class JAudioData{
         String temp = tempFileFolder.toString()+"\\"+"temp"+EXTENSION;
         if(EXTENSION.equals(M4A) || EXTENSION.equals(MP4)){
             Mp4TagWriter writer = new Mp4TagWriter();
+
             Files.deleteIfExists(new File(temp).toPath());
             RandomAccessFile tempRaf = new RandomAccessFile(temp,"rw");
 
+
             writer.write(tag,new RandomAccessFile(songFile,"rw"),tempRaf);
             Files.deleteIfExists(songFile.toPath());
-            Files.copy(new File(temp).toPath(),songFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
+            Files.copy(new File(temp).toPath(),songFile.toPath(), StandardCopyOption.REPLACE_EXISTING);// file is being accessed b th tag object, it isn't a new object, just a reference
             Files.deleteIfExists(new File(temp).toPath());
+            tempRaf.close();
+            new RandomAccessFile(songFile,"rw").close();
+
         }
         else if (EXTENSION.equals(MP3)){
             AudioFile audioFile = AudioFileIO.read(songFile);
@@ -221,35 +226,42 @@ public class JAudioData{
         purchasedTag.setField(Mp4FieldKey.RATING,EXPLICIT);
         tag = purchasedTag;
     }
-    public static void setItunesExplicit(File testFile) throws Exception {
+    public static void setItunesExplicit(File songFile) throws Exception {
         Mp4TagReader reader = new Mp4TagReader();
         Mp4TagWriter writer = new Mp4TagWriter();
 
-        RandomAccessFile test = new RandomAccessFile(testFile.toString(), "rw");
+        RandomAccessFile test = new RandomAccessFile(songFile.toString(), "rw");
         RandomAccessFile purchasedAAC = new RandomAccessFile(
                 PURCHASED_AAC, "rw");
         Mp4Tag testTag = reader.read(test);
-        Mp4Tag purchasedAacTag = reader.read(purchasedAAC);
-        purchasedAacTag.deleteArtworkField();
 
-        for(FieldKey key:FieldKey.values()){
-            try{
-            String data = testTag.getFirst(key);
-            if(data!=null && !(data.equals(""))) {
-                purchasedAacTag.setField(key,data);}
-            else{purchasedAacTag.deleteField(key);}
-            }
-            catch (org.jaudiotagger.tag.KeyNotFoundException e){}
-        }
-        purchasedAacTag.setField(Mp4FieldKey.RATING,"1");
+        testTag.setField(Mp4FieldKey.RATING,"1");
 
 
         Files.deleteIfExists(new File("temp.m4a").toPath());
         RandomAccessFile temp = new RandomAccessFile("temp.m4a","rw");
+        writer.write(testTag,test,temp);
+        Files.deleteIfExists(songFile.toPath());
+        Files.copy(new File("temp.m4a").toPath(),songFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
+        Files.deleteIfExists(new File("temp.m4a").toPath());
+    }
 
-        writer.write(purchasedAacTag,test,temp);
-        Files.deleteIfExists(testFile.toPath());
-        Files.copy(new File("temp.m4a").toPath(),testFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
+    public static void setSongLyrics(File songFile, String lyrics) throws Exception{
+        Mp4TagReader reader = new Mp4TagReader();
+        Mp4TagWriter writer = new Mp4TagWriter();
+
+        RandomAccessFile songRaf = new RandomAccessFile(songFile.toString(), "rw");
+
+        Mp4Tag tag = reader.read(songRaf);
+        tag.addField(FieldKey.LYRICS, lyrics);
+        tag.setField(FieldKey.LYRICS, lyrics);
+
+        Files.deleteIfExists(new File("temp.m4a").toPath());
+        RandomAccessFile temp = new RandomAccessFile("temp.m4a","rw");
+
+        writer.write(tag,songRaf,temp);
+        Files.deleteIfExists(songFile.toPath());
+        Files.copy(new File("temp.m4a").toPath(),songFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
         Files.deleteIfExists(new File("temp.m4a").toPath());
 
     }
@@ -277,7 +289,7 @@ public class JAudioData{
         addFiles(new File(path),MP3);
 
         for(File file: allFiles) {
-            //for(int i=0;i<10;i++){
+
             String output = out;
             String album = getAlbumMp3(file);
             for (char c : ca) {
@@ -306,6 +318,7 @@ public class JAudioData{
                     useAlbum = true;
                 }
             }
+            String lyrics ="";
 
             if ( albumArtist!=null && !albumArtist.equals("") && title!=null && !title.equals("") ){
                 if (useAlbum) {
@@ -313,14 +326,16 @@ public class JAudioData{
 
                     try {
 
-                        explicit = WebpageParser.isExplicit(albumArtist, Parser.removeInfoForSearch(title), Parser.removeInfoForSearch(albumTitle));
+                        lyrics = WebpageParser.getLyrics(albumArtist, Parser.removeInfoForSearch(title), Parser.removeInfoForSearch(albumTitle));
+                        explicit = WebpageParser.isExplicit(lyrics);
                     } catch (Exception e) {
                         e.printStackTrace();
                     }
                 }
                 else {
                     try {
-                        explicit = WebpageParser.isExplicit(Parser.removeInfoForSearch(title), albumArtist);
+                        lyrics = WebpageParser.getLyrics(Parser.removeInfoForSearch(title), albumArtist);
+                        explicit = WebpageParser.isExplicit(lyrics);
                     } catch (Exception e) {
                         e.printStackTrace();
                     }
@@ -328,14 +343,11 @@ public class JAudioData{
             }
 
             JFFMpeg.mp3Tom4a(file,new File(output),new File(out+"\\temp"+allFiles.indexOf(file)+".jpeg"),
-                    ffmpeg,bitRate, explicit);
+                    ffmpeg,bitRate, explicit, lyrics);
 
-            //JFFMpeg.mp3Tom4a(allFiles.get(i),new File(output),new File(TEMP+i+".jpeg"));
 
         }
-        //allFiles = new ArrayList<>();
-        //addFiles(new File(OUTPUT),M4A);
-        //setAllExplicit();
+
 
     }
 
@@ -346,28 +358,8 @@ public class JAudioData{
             org.jaudiotagger.audio.exceptions.CannotWriteException,
             IOException {
 
-        addFiles(new File(PATH),MP3);
-
-        //for(File file: allFiles) {
-            for(int i=0;i<10;i++){
-            String output = OUTPUT;
-            String album = getAlbumMp3(allFiles.get(i));
-            //String album = getAlbumMp3(file);
-            char[] ca = {'.',',',':',';','\"','\'','|','\t','\n',' ','*','?','!','=','/','\\'};
-            for (char c : ca) {
-                album = album.replace(""+c, "_");
-            }
-            output+="\\"+album;
-            File directory = new File(output);
-            directory.mkdir();
-            //JFFMpeg.mp3Tom4a(file,new File(output),new File(TEMP+allFiles.indexOf(file)+".jpeg")
-            //        ,new File ("C:\\Users\\Zubair\\Desktop\\JFFMpeg\\ffmpeg\\bin"),300);
-            JFFMpeg.mp3Tom4a(allFiles.get(i),new File(output),new File(TEMP+i+".jpeg"),
-                    new File ("C:\\Users\\Zubair\\Desktop\\JFFMpeg\\ffmpeg\\bin"),300, true);
-
-
-        }
-
+        JAudioData test = new JAudioData(new File("C:\\Users\\Zubair\\Documents\\gpm\\Rae Sremmurd\\SR3MM\\1-07 Powerglide (From SR3MM).mp3"),new File("temp.m4a"));
+        test.printAllData();
     }
 }
 

@@ -13,7 +13,7 @@ public class FileUtil {
     public static final String[] EXTENSIONS ={M4A,MP4,MP3,FLAC,WAV};
 
 
-    public static final char[] ILLEGAL_CHARS = {'.',',',':',';','\"','\'','|','\t','\n','*','?','!','=','/','\\', ' '};
+    public static final char[] ILLEGAL_CHARS = {'.',',',':',';','\"','\'','|','\t','\n','*','?','!','=','/','\\', ' ', '<','>','>'};
 
 
 
@@ -50,7 +50,8 @@ public class FileUtil {
     }
     public static String makeFileNameSafe(String str){
         for (char c : ILLEGAL_CHARS) {
-            str = str.replace(c, '_');
+            str = str.replace(c, ' ');
+            System.out.println(c+"\t"+str);
         }
         return str;
     }

@@ -19,7 +19,7 @@ public class JFFMpeg {
     }
 
 
-    public static void mp3Tom4a(File mp3File, File m4aFolder, File coverArt, File ffmpegBin, int bitRate, boolean explicit) throws Exception {
+    public static void mp3Tom4a(File mp3File, File m4aFolder, File coverArt, File ffmpegBin, int bitRate, boolean explicit, String lyrics) throws Exception {
 
         String input = mp3File.toString();
         String name = mp3File.getName();
@@ -41,6 +41,7 @@ public class JFFMpeg {
         while ((reader.readLine()) != null) {System.out.println(reader.readLine());}
         p.waitFor();
         System.out.println(explicit);
+        JAudioData.setSongLyrics(new File(output),lyrics);
         if (explicit) {
             JAudioData.setItunesExplicit(new File(output));
         }
@@ -49,8 +50,6 @@ public class JFFMpeg {
         }
         Files.deleteIfExists(coverArt.toPath());
     }
-
-
     /**
      *
      * @param file The original file. can be mp3 or flac or alac(.m4a)
@@ -62,7 +61,7 @@ public class JFFMpeg {
      */
     public boolean convertToM4a(File file, File m4aOutputFile, File coverArt, int bitRate) throws Exception{
         String input = file.toString();
-
+        // next line is what would be entered into command prompt
         //cd ffmpeg\bin && ffmpeg -y -i input.mp3 -an -vcodec copy cover.jpg && ffmpeg -y -i input.mp3 -c:a aac -b:a 192k -vn output.m4a
         ProcessBuilder builder = new ProcessBuilder(
                 "cmd.exe", "/c", "cd "+ffmpegPath+" && " +
@@ -83,6 +82,6 @@ public class JFFMpeg {
         mp3Tom4a(new File("C:\\Users\\Zubair\\Documents\\music\\song.mp3"),
                 new File("C:\\Users\\Zubair\\Documents\\music"),
                 new File("C:\\Users\\Zubair\\Documents\\music\\coverArt.jpeg"),
-                new File ("C:\\Users\\Zubair\\Desktop\\JFFMpeg\\ffmpeg\\bin"),320, true);
+                new File ("C:\\Users\\Zubair\\Desktop\\JFFMpeg\\ffmpeg\\bin"),320, true, "");
     }
 }
